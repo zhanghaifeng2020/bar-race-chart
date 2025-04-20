@@ -1,0 +1,923 @@
+<!--
+	此示例下载自 https://echarts.apache.org/examples/zh/editor.html?c=bar-race
+-->
+<!DOCTYPE html>
+<html lang="en" style="height: 100%">
+<head>
+  <meta charset="utf-8">
+  <style>
+    .container-wrapper {
+      display: flex;
+      height: 100%;
+      flex-direction: column;
+    }
+    #input-panel {
+      padding: 20px;
+      background-color: #f5f5f5;
+      border-top: 1px solid #ddd;
+      max-height: 40vh;
+      overflow-y: auto;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      box-sizing: border-box;
+      z-index: 100;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    }
+    #container {
+      height: calc(100% - 40px);
+      width: 100%;
+      position: fixed;
+      top: 0;
+      z-index: 1;
+    }
+    .toggle-panel-btn {
+      position: fixed;
+      bottom: 40vh;
+      left: 20px;
+      z-index: 101;
+      padding: 8px 15px;
+      background-color: #555;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .toggle-panel-btn:hover {
+      background-color: #333;
+    }
+    .toggle-panel-btn.collapsed::after {
+      content: "▲ 显示数据面板";
+    }
+    .toggle-panel-btn.expanded::after {
+      content: "▼ 隐藏数据面板";
+    }
+    .input-group {
+      margin-bottom: 10px;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    .input-group input {
+      padding: 5px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 8px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    button#stop-btn {
+      background-color: #f44336;
+    }
+    button#stop-btn:hover {
+      background-color: #d32f2f;
+    }
+    .secondary-btn {
+      background-color: #2196F3;
+    }
+    .secondary-btn:hover {
+      background-color: #0b7dda;
+    }
+    .data-btn {
+      background-color: #ff9800;
+    }
+    .data-btn:hover {
+      background-color: #e68a00;
+    }
+    .data-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+    .data-col {
+      flex: 1;
+    }
+    .data-row input {
+      width: 100%;
+    }
+    .time-label {
+      width: 100px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+    }
+    .remove-btn {
+      background-color: #f44336;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-weight: bold;
+      margin-left: 5px;
+    }
+    .remove-btn:hover {
+      background-color: #d32f2f;
+    }
+    #add-time-btn {
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+    #file-input {
+      display: none;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border-radius: 5px;
+      width: 80%;
+      max-width: 500px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .modal-header h3 {
+      margin: 0;
+    }
+    .close {
+      color: #aaa;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .close:hover {
+      color: black;
+    }
+    
+    /* 简约标题样式 */
+    .panel-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    /* 响应式布局 */
+    @media (max-width: 768px) {
+      #input-panel {
+        max-height: 60vh;
+      }
+      #container {
+        height: calc(100% - 60vh);
+      }
+      .toggle-panel-btn {
+        bottom: 60vh;
+      }
+    }
+  </style>
+</head>
+<body style="height: 100%; margin: 0">
+  <div class="container-wrapper">
+    <div id="container"></div>
+    <button id="toggle-panel-btn" class="toggle-panel-btn expanded"></button>
+    <div id="input-panel">
+      <div class="panel-title">
+        数据控制面板
+        <span id="collapse-icon"></span>
+      </div>
+      <div class="input-group" id="categories-group">
+        <label for="categories">类别名称（用逗号分隔）:</label>
+        <input type="text" id="categories" placeholder="A,B,C,D,E" value="A,B,C,D,E">
+      </div>
+      
+      <div class="input-group" id="data-input-group">
+        <label>数据值:</label>
+        <div id="data-rows"></div>
+        <button id="add-time-btn" class="secondary-btn">添加时间点</button>
+      </div>
+      
+      <div class="input-group">
+        <label for="update-interval">更新间隔（毫秒）:</label>
+        <input type="number" id="update-interval" value="3000" min="500">
+      </div>
+      
+      <div class="input-group">
+        <label for="max-bars">显示的最大条数:</label>
+        <input type="number" id="max-bars" value="3" min="1">
+      </div>
+      
+      <div class="input-group">
+        <label for="animation-duration">动画持续时间（毫秒）:</label>
+        <input type="number" id="animation-duration" value="3000" min="500">
+      </div>
+      
+      <div class="button-group">
+        <button id="apply-btn">应用数据</button>
+        <button id="start-btn">开始动画</button>
+        <button id="stop-btn">停止动画</button>
+        <button id="export-btn" class="data-btn">导出数据(CSV)</button>
+        <button id="import-btn" class="data-btn">导入数据(CSV)</button>
+        <input type="file" id="file-input" accept=".csv">
+      </div>
+    </div>
+  </div>
+
+  <!-- 导入提示模态框 -->
+  <div id="import-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>导入数据格式说明</h3>
+        <span class="close">&times;</span>
+      </div>
+      <div class="modal-body">
+        <p>CSV文件格式应为：</p>
+        <ol>
+          <li>第一行：时间点名称</li>
+          <li>第二行：类别名称，用逗号分隔</li>
+          <li>后续行：每个时间点的数据，每行对应一个时间点</li>
+        </ol>
+        <p>示例：</p>
+        <pre>Time 1,Time 2,Time 3
+A,B,C,D,E
+100,150,200,120,80
+150,200,250,180,100
+200,250,300,220,150</pre>
+        <div style="margin-top: 20px; text-align: center;">
+          <button id="select-file-btn" class="data-btn">选择CSV文件</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/javascript" src="https://fastly.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  
+  <!-- Uncomment this line if you want to dataTool extension
+  <script type="text/javascript" src="https://fastly.jsdelivr.net/npm/echarts@5/dist/extension/dataTool.min.js"></script>
+  -->
+  <!-- Uncomment this line if you want to use gl extension
+  <script type="text/javascript" src="https://echarts.apache.org/zh/js/vendors/echarts-gl/dist/echarts-gl.min.js"></script>
+  -->
+  <!-- Uncomment this line if you want to echarts-stat extension
+  <script type="text/javascript" src="https://echarts.apache.org/zh/js/vendors/echarts-stat/dist/ecStat.min.js"></script>
+  -->
+  <!-- Uncomment this line if you want to echarts-graph-modularity extension
+  <script type="text/javascript" src="https://echarts.apache.org/zh/js/vendors/echarts-graph-modularity/dist/echarts-graph-modularity.min.js"></script>
+  -->
+  <!-- Uncomment this line if you want to use map
+  <script type="text/javascript" src="https://fastly.jsdelivr.net/npm/echarts@4.9.0/map/js/world.js"></script>
+  -->
+  <!-- Uncomment these two lines if you want to use bmap extension
+  <script type="text/javascript" src="https://api.map.baidu.com/api?v=3.0&ak=YOUR_API_KEY"></script>
+  <script type="text/javascript" src="https://fastly.jsdelivr.net/npm/echarts@5/dist/extension/bmap.min.js"></script>
+  -->
+
+  <script type="text/javascript">
+    // DOM元素
+    const categoriesInput = document.getElementById('categories');
+    const updateIntervalInput = document.getElementById('update-interval');
+    const maxBarsInput = document.getElementById('max-bars');
+    const animationDurationInput = document.getElementById('animation-duration');
+    const applyBtn = document.getElementById('apply-btn');
+    const startBtn = document.getElementById('start-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const dataRows = document.getElementById('data-rows');
+    const addTimeBtn = document.getElementById('add-time-btn');
+    const exportBtn = document.getElementById('export-btn');
+    const importBtn = document.getElementById('import-btn');
+    const fileInput = document.getElementById('file-input');
+    const importModal = document.getElementById('import-modal');
+    const closeModalBtn = document.querySelector('.close');
+    const selectFileBtn = document.getElementById('select-file-btn');
+    const togglePanelBtn = document.getElementById('toggle-panel-btn');
+    const inputPanel = document.getElementById('input-panel');
+    const container = document.getElementById('container');
+    
+    // 图表初始化
+    var dom = document.getElementById('container');
+    var myChart = echarts.init(dom, null, {
+      renderer: 'canvas',
+      useDirtyRect: false
+    });
+    
+    // 数据和配置
+    let allData = []; // 存储所有时间点的数据
+    let categories = [];
+    let animationInterval;
+    let option;
+    let currentTimeIndex = 0;
+    
+    // 默认配置
+    let updateInterval = 3000;
+    let maxBars = 3;
+    let animationDuration = 3000;
+    
+    // 初始化函数
+    function initialize() {
+      // 设置默认类别和数据
+      loadExampleData();
+      
+      // 初始化图表
+      initChart();
+      
+      // 添加时间点按钮事件
+      addTimeBtn.addEventListener('click', addTimePoint);
+    }
+    
+    // 加载示例数据
+    function loadExampleData() {
+      // 设置类别
+      categories = ['中国', '美国', '日本', '英国', '德国'];
+      categoriesInput.value = categories.join(',');
+      
+      // 清除现有数据行
+      dataRows.innerHTML = '';
+      allData = [];
+      
+      // 设置时间点和数据
+      const timeLabels = ['2020年', '2021年', '2022年'];
+      const exampleData = [
+        [100, 150, 80, 70, 90],  // 2020年数据
+        [120, 140, 95, 85, 100], // 2021年数据
+        [150, 145, 110, 95, 120] // 2022年数据
+      ];
+      
+      // 创建时间点行
+      for (let i = 0; i < timeLabels.length; i++) {
+        const timeRow = document.createElement('div');
+        timeRow.className = 'data-row';
+        timeRow.dataset.time = i + 1;
+        
+        // 添加时间点标签
+        const timeLabel = document.createElement('div');
+        timeLabel.className = 'time-label';
+        const timeInput = document.createElement('input');
+        timeInput.type = 'text';
+        timeInput.className = 'time-input';
+        timeInput.value = timeLabels[i];
+        timeLabel.appendChild(timeInput);
+        
+        // 添加删除按钮
+        if (i > 0) {
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'remove-btn';
+          removeBtn.innerHTML = '&times;';
+          removeBtn.addEventListener('click', function() {
+            removeTimePoint(timeRow);
+          });
+          timeLabel.appendChild(removeBtn);
+        }
+        
+        timeRow.appendChild(timeLabel);
+        
+        // 为每个类别添加数据输入
+        const dataRow = [];
+        for (let j = 0; j < categories.length; j++) {
+          const dataCol = document.createElement('div');
+          dataCol.className = 'data-col';
+          
+          const input = document.createElement('input');
+          input.type = 'number';
+          input.className = 'data-input';
+          input.placeholder = `类别${categories[j]}的值`;
+          input.value = exampleData[i][j];
+          dataRow.push(exampleData[i][j]);
+          
+          dataCol.appendChild(input);
+          timeRow.appendChild(dataCol);
+        }
+        
+        dataRows.appendChild(timeRow);
+        
+        // 存储时间点数据
+        dataRow.timeLabel = timeLabels[i];
+        allData.push(dataRow);
+      }
+    }
+    
+    // 添加新的时间点
+    function addTimePoint() {
+      const timePoint = allData.length + 1;
+      const timeRow = document.createElement('div');
+      timeRow.className = 'data-row';
+      timeRow.dataset.time = timePoint;
+      
+      // 添加时间点标签
+      const timeLabel = document.createElement('div');
+      timeLabel.className = 'time-label';
+      const timeInput = document.createElement('input');
+      timeInput.type = 'text';
+      timeInput.className = 'time-input';
+      timeInput.placeholder = '时间点名称';
+      
+      // 根据已有时间点推测下一个时间点名称
+      if (allData.length > 0 && allData[allData.length-1].timeLabel) {
+        const lastLabel = allData[allData.length-1].timeLabel;
+        if (lastLabel.match(/\d+年/)) {
+          const year = parseInt(lastLabel.match(/(\d+)年/)[1]);
+          timeInput.value = `${year + 1}年`;
+        } else {
+          timeInput.value = `Time ${timePoint}`;
+        }
+      } else {
+        timeInput.value = `Time ${timePoint}`;
+      }
+      
+      timeLabel.appendChild(timeInput);
+      
+      // 添加删除按钮
+      if (timePoint > 1) {
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.addEventListener('click', function() {
+          removeTimePoint(timeRow);
+        });
+        timeLabel.appendChild(removeBtn);
+      }
+      
+      timeRow.appendChild(timeLabel);
+      
+      // 为每个类别添加数据输入
+      categories.forEach((cat, index) => {
+        const dataCol = document.createElement('div');
+        dataCol.className = 'data-col';
+        
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.className = 'data-input';
+        input.placeholder = `类别${cat}的值`;
+        input.value = Math.round(100 + Math.random() * 300 * timePoint); // 默认随机值递增
+        
+        dataCol.appendChild(input);
+        timeRow.appendChild(dataCol);
+      });
+      
+      dataRows.appendChild(timeRow);
+      
+      // 添加新数据到allData
+      const newData = Array(categories.length).fill(0);
+      allData.push(newData);
+    }
+    
+    // 移除时间点
+    function removeTimePoint(timeRow) {
+      const timeIndex = parseInt(timeRow.dataset.time) - 1;
+      timeRow.remove();
+      
+      // 更新剩余时间点的编号
+      const timeRows = dataRows.querySelectorAll('.data-row');
+      timeRows.forEach((row, index) => {
+        row.dataset.time = index + 1;
+        const timeInput = row.querySelector('.time-input');
+        if (timeInput.value.startsWith('Time ')) {
+          timeInput.value = `Time ${index + 1}`;
+        }
+      });
+      
+      // 更新allData
+      allData.splice(timeIndex, 1);
+    }
+    
+    // 根据类别名称更新表单
+    function updateFormFromCategories() {
+      categories = categoriesInput.value.split(',').map(cat => cat.trim());
+      
+      // 清除现有行
+      dataRows.innerHTML = '';
+      allData = [];
+      
+      // 重新添加时间点
+      addTimePoint();
+      addTimePoint();
+    }
+    
+    // 从输入获取数据
+    function getDataFromInputs() {
+      allData = [];
+      const timeRows = dataRows.querySelectorAll('.data-row');
+      
+      timeRows.forEach(row => {
+        const inputs = row.querySelectorAll('.data-input');
+        const timeInput = row.querySelector('.time-input');
+        const timeLabel = timeInput.value;
+        
+        const dataRow = Array.from(inputs).map(input => parseInt(input.value) || 0);
+        dataRow.timeLabel = timeLabel; // 存储时间标签
+        
+        allData.push(dataRow);
+      });
+      
+      updateInterval = parseInt(updateIntervalInput.value) || 3000;
+      maxBars = parseInt(maxBarsInput.value) || 3;
+      animationDuration = parseInt(animationDurationInput.value) || 3000;
+    }
+    
+    // 初始化图表
+    function initChart() {
+      // 确保有数据
+      if (allData.length === 0 || allData[0].length === 0) {
+        getDataFromInputs();
+      }
+      
+      option = {
+        xAxis: {
+          max: 'dataMax'
+        },
+        yAxis: {
+          type: 'category',
+          data: categories,
+          inverse: true,
+          animationDuration: 300,
+          animationDurationUpdate: 300,
+          max: maxBars - 1 // 只显示最大的几个条形
+        },
+        series: [
+          {
+            realtimeSort: true,
+            name: '数值',
+            type: 'bar',
+            data: allData[0],
+            label: {
+              show: true,
+              position: 'right',
+              valueAnimation: true
+            }
+          }
+        ],
+        legend: {
+          show: true
+        },
+        animationDuration: 0,
+        animationDurationUpdate: animationDuration,
+        animationEasing: 'linear',
+        animationEasingUpdate: 'linear',
+        graphic: {
+          elements: [
+            {
+              type: 'text',
+              right: 160,
+              bottom: 60,
+              style: {
+                text: allData[0].timeLabel || 'Time 1',
+                font: 'bolder 80px monospace',
+                fill: 'rgba(100, 100, 100, 0.25)'
+              },
+              z: 100
+            }
+          ]
+        }
+      };
+      
+      myChart.setOption(option);
+    }
+    
+    // 更新到下一个时间点
+    function updateToNextTime() {
+      currentTimeIndex = (currentTimeIndex + 1);
+      
+      // 检查是否到达最后一个时间点
+      if (currentTimeIndex >= allData.length) {
+        // 停止动画
+        stopAnimation();
+        return;
+      }
+      
+      const timeData = allData[currentTimeIndex];
+      
+      myChart.setOption({
+        series: [
+          {
+            type: 'bar',
+            data: timeData
+          }
+        ],
+        graphic: {
+          elements: [
+            {
+              type: 'text',
+              style: {
+                text: timeData.timeLabel || `Time ${currentTimeIndex + 1}`
+              }
+            }
+          ]
+        }
+      });
+    }
+    
+    // 开始动画
+    function startAnimation() {
+      // 清除之前的定时器
+      stopAnimation();
+      
+      // 重置当前时间索引
+      currentTimeIndex = 0;
+      
+      // 显示第一个时间点
+      const timeData = allData[currentTimeIndex];
+      myChart.setOption({
+        series: [
+          {
+            type: 'bar',
+            data: timeData
+          }
+        ],
+        graphic: {
+          elements: [
+            {
+              type: 'text',
+              style: {
+                text: timeData.timeLabel || `Time ${currentTimeIndex + 1}`
+              }
+            }
+          ]
+        }
+      });
+      
+      // 设置定期更新
+      animationInterval = setInterval(function() {
+        updateToNextTime();
+      }, updateInterval);
+      
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+    }
+    
+    // 停止动画
+    function stopAnimation() {
+      if (animationInterval) {
+        clearInterval(animationInterval);
+        animationInterval = null;
+      }
+      
+      startBtn.disabled = false;
+      stopBtn.disabled = false;
+    }
+    
+    // 面板切换功能
+    function togglePanel() {
+      const isPanelVisible = inputPanel.style.display !== 'none';
+      
+      if (isPanelVisible) {
+        // 隐藏面板
+        inputPanel.style.display = 'none';
+        container.style.height = '100%';
+        togglePanelBtn.className = 'toggle-panel-btn collapsed';
+      } else {
+        // 显示面板
+        inputPanel.style.display = 'block';
+        container.style.height = 'calc(100% - 40vh)';
+        togglePanelBtn.className = 'toggle-panel-btn expanded';
+      }
+      
+      // 重新调整图表大小
+      setTimeout(() => {
+        myChart.resize();
+      }, 300);
+    }
+    
+    // 切换面板按钮点击事件
+    togglePanelBtn.addEventListener('click', togglePanel);
+    
+    // 事件监听
+    categoriesInput.addEventListener('change', updateFormFromCategories);
+    
+    applyBtn.addEventListener('click', function() {
+      getDataFromInputs();
+      initChart();
+      stopAnimation();
+    });
+    
+    startBtn.addEventListener('click', startAnimation);
+    stopBtn.addEventListener('click', stopAnimation);
+    
+    // 导出CSV数据
+    exportBtn.addEventListener('click', exportData);
+    
+    // 导入数据按钮点击事件
+    importBtn.addEventListener('click', function() {
+      importModal.style.display = 'block';
+    });
+    
+    // 选择文件按钮点击事件
+    selectFileBtn.addEventListener('click', function() {
+      fileInput.click();
+    });
+    
+    // 关闭模态框
+    closeModalBtn.addEventListener('click', function() {
+      importModal.style.display = 'none';
+    });
+    
+    // 点击模态框外部也可以关闭
+    window.addEventListener('click', function(event) {
+      if (event.target == importModal) {
+        importModal.style.display = 'none';
+      }
+    });
+    
+    // 文件选择事件
+    fileInput.addEventListener('change', function(e) {
+      importData(e);
+      importModal.style.display = 'none';
+    });
+    
+    // 导出数据为CSV
+    function exportData() {
+      // 获取最新的数据
+      getDataFromInputs();
+      
+      // 创建CSV内容
+      let csvContent = '';
+      
+      // 添加时间点行
+      const timeLabels = allData.map(data => data.timeLabel || '');
+      csvContent += timeLabels.join(',') + '\n';
+      
+      // 添加类别行
+      csvContent += categories.join(',') + '\n';
+      
+      // 添加数据行
+      for (let colIndex = 0; colIndex < categories.length; colIndex++) {
+        let rowValues = [];
+        for (let timeIndex = 0; timeIndex < allData.length; timeIndex++) {
+          rowValues.push(allData[timeIndex][colIndex] || 0);
+        }
+        csvContent += rowValues.join(',') + '\n';
+      }
+      
+      // 创建Blob对象
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      
+      // 创建下载链接
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'bar_race_data.csv');
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      
+      // 触发下载
+      link.click();
+      
+      // 清理
+      document.body.removeChild(link);
+    }
+    
+    // 导入CSV数据
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const contents = e.target.result;
+        const lines = contents.split('\n');
+        
+        if (lines.length < 3) {
+          alert('CSV格式不正确');
+          return;
+        }
+        
+        try {
+          // 解析时间点名称
+          const timeLabels = lines[0].split(',').map(label => label.trim()).filter(label => label);
+          
+          // 解析类别
+          const newCategories = lines[1].split(',').map(cat => cat.trim()).filter(cat => cat);
+          if (newCategories.length === 0) {
+            alert('没有找到有效的类别名称');
+            return;
+          }
+          
+          categoriesInput.value = newCategories.join(',');
+          categories = newCategories;
+          
+          // 清除现有数据行
+          dataRows.innerHTML = '';
+          allData = [];
+          
+          console.log(`导入数据: ${timeLabels.length} 个时间点, ${newCategories.length} 个类别`);
+          
+          // 为每个时间点创建输入行
+          for (let i = 0; i < timeLabels.length; i++) {
+            if (!timeLabels[i].trim()) continue;
+            
+            const dataRow = Array(newCategories.length).fill(0);
+            
+            // 创建UI行
+            const timeRow = document.createElement('div');
+            timeRow.className = 'data-row';
+            timeRow.dataset.time = i + 1;
+            
+            // 添加时间点标签
+            const timeLabel = document.createElement('div');
+            timeLabel.className = 'time-label';
+            const timeInput = document.createElement('input');
+            timeInput.type = 'text';
+            timeInput.className = 'time-input';
+            timeInput.value = timeLabels[i];
+            timeLabel.appendChild(timeInput);
+            
+            // 添加删除按钮
+            if (i > 0) {
+              const removeBtn = document.createElement('button');
+              removeBtn.className = 'remove-btn';
+              removeBtn.innerHTML = '&times;';
+              removeBtn.addEventListener('click', function() {
+                removeTimePoint(timeRow);
+              });
+              timeLabel.appendChild(removeBtn);
+            }
+            
+            timeRow.appendChild(timeLabel);
+            
+            // 为每个类别添加数据输入
+            for (let j = 0; j < newCategories.length; j++) {
+              const dataCol = document.createElement('div');
+              dataCol.className = 'data-col';
+              
+              const input = document.createElement('input');
+              input.type = 'number';
+              input.className = 'data-input';
+              
+              // 获取数据值 - CSV数据是按行排列的，第2+j行是类别j的所有时间点数据
+              if (j + 2 < lines.length) {
+                const values = lines[j + 2].split(',');
+                if (i < values.length) {
+                  const value = parseInt(values[i]) || 0;
+                  input.value = value;
+                  dataRow[j] = value;
+                } else {
+                  input.value = 0;
+                }
+              } else {
+                input.value = 0;
+              }
+              
+              dataCol.appendChild(input);
+              timeRow.appendChild(dataCol);
+            }
+            
+            dataRows.appendChild(timeRow);
+            
+            // 存储时间点数据
+            dataRow.timeLabel = timeLabels[i];
+            allData.push(dataRow);
+          }
+          
+          console.log('数据导入完成，应用到图表');
+          
+          // 应用数据到图表
+          getDataFromInputs();
+          initChart();
+          
+        } catch (err) {
+          console.error('导入数据时出错:', err);
+          alert('导入数据时出错: ' + err.message);
+        }
+        
+        // 清除文件输入值，以便再次选择同一个文件
+        fileInput.value = '';
+      };
+      reader.readAsText(file);
+    }
+    
+    // 监听窗口大小变化
+    window.addEventListener('resize', function() {
+      myChart.resize();
+    });
+    
+    // 初始化应用
+    initialize();
+  </script>
+</body>
+</html>
